@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Agendamento de Corte de Cabelo</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; padding: 0; background: #f4f4f4; }
+    h1 { color: #333; }
+    form { background: white; padding: 20px; border-radius: 8px; max-width: 400px; margin-bottom: 30px; }
+    input, button { width: 100%; padding: 10px; margin: 8px 0; border-radius: 5px; border: 1px solid #ccc; }
+    button { background-color: #27ae60; color: white; font-weight: bold; border: none; cursor: pointer; }
+    button:hover { background-color: #219150; }
+    ul { list-style: none; padding: 0; max-width: 600px; }
+    li { background: white; margin-bottom: 10px; padding: 10px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
+    .cancelar-btn { background-color: #e74c3c; border: none; color: white; padding: 6px 12px; border-radius: 5px; cursor: pointer; }
+    .cancelar-btn:hover { background-color: #c0392b; }
+    .status { font-weight: bold; margin-left: 10px; }
+  </style>
+</head>
+<body>
+
+  <h1>Agendamento de Corte de Cabelo</h1>
+
+  <form id="form-agendamento">
+    <input type="text" id="nome" placeholder="Seu nome" required />
+    <input type="tel" id="telefone" placeholder="Telefone (ex: (99) 99999-9999)" required />
+    <input type="datetime-local" id="dataHora" required />
+    <button type="submit">Agendar</button>
+  </form>
+
+  <h2>Agendamentos</h2>
+  <ul id="lista-agendamentos"></ul>
+
+  <script>
+    const apiBase = 'http://localhost:3000';
+
+    async function carregarAgendamentos() {
+      const res = await fetch(apiBase + '/agendamentos');
+      const agendamentos = await res.json();
+      const lista = document.getElementById('lista-agendamentos');
+      lista.innerHTML = '';
+      agendamentos.forEach(a => {
+        const li = document.createElement('li');
+        li.textContent = `${a.nome} | ${a.telefone} | ${new Date(a.dataHora).toLocaleString('pt-BR')} - Status: `;
+
+        const statusSpan = document.createElement('span');
+        statusSpan.textContent = a.status;
+        statusSpan.className = 'status';
+        li.appendChild(statusSpan);
+
+        if (a.status === 'pendente') {
+          const btnCancelar = document.createElement('button');
+          btnCancelar.textContent = 'Cancelar';
+          btnCancelar.className = 'cancelar-btn';
+          btnCancelar.onclick = async () => {
+            await fetch(apiBase + '/agendamentos/' + a.id + '/cancelar', { method: 'PUT' });
+            carregarAgendamentos();
+          };
+          li.appendChild(btnCancelar);
+        }
+        lista.appendChild(li);
+      });
+    }
+
+    document.getElementById('form-agendamento').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const nome = document.getElementById('nome').value;
+      const telefone = document.getElementById('telefone').value;
+      const dataHora = document.getElementById('dataHora').value;
+
+      const res = await fetch(apiBase + '/agendar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome, telefone, dataHora }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        alert('Agendamento realizado com sucesso!');
+        document.getElementById('form-agendamento').reset();
+        carregarAgendamentos();
+      } else {
+        alert('Erro: ' + (result.error || 'Não foi possível agendar.'));
+      }
+    });
+
+    carregarAgendamentos();
+  </script>
+
+</body>
+</html>
